@@ -619,6 +619,16 @@ void CB2_InitBattle(void)
 static void CB2_InitBattleInternal(void)
 {
     s32 i;
+    s32 j;
+    s32 k;
+    u8 levelToUse;
+    u16 speciesToUse;
+    u32 experience;
+    u8 friendShipToUse;
+    u32 evToUse;
+    int evolutionItems[] = {ITEM_WATER_STONE, ITEM_LEAF_STONE, ITEM_THUNDER_STONE, ITEM_FIRE_STONE, ITEM_MOON_STONE, ITEM_SUN_STONE};
+    int newItem;
+
 
     SetHBlankCallback(NULL);
     SetVBlankCallback(NULL);
@@ -698,6 +708,86 @@ static void CB2_InitBattleInternal(void)
         if (gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS)
             CreateNPCTrainerParty(&gEnemyParty[PARTY_SIZE / 2], gTrainerBattleOpponent_B, FALSE);
         SetWildMonHeldItem();
+    }
+
+    /* cedsi level scaling meme */
+    if (GetMonData(&gEnemyParty[0], MON_DATA_LEVEL) == 1){
+        // it's a level that we have to scale
+        for (i = 0; i < 6; i++) {
+            if (GetMonData(&gEnemyParty[i], MON_DATA_SPECIES_OR_EGG) == SPECIES_NONE){
+                break;
+            }
+            if (GetMonData(&gEnemyParty[i], MON_DATA_ATK_IV) > GetNbBadges() * 4){
+                // this pokemon is ignored until you have enough badges
+                ZeroMonData(&gEnemyParty[i]);
+            } else {
+                levelToUse = GetLevelToUse(GetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM));
+                SetMonData(&gEnemyParty[i], MON_DATA_LEVEL, &levelToUse);
+                experience = gExperienceTables[gSpeciesInfo[GetMonData(&gEnemyParty[i], MON_DATA_SPECIES, NULL)].growthRate][GetMonData(&gEnemyParty[i], MON_DATA_LEVEL, NULL)];
+                SetMonData(&gEnemyParty[i], MON_DATA_EXP, &experience);
+
+
+
+                // remove held scaling-specific items (pokeballs)
+                if (GetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM) <= ITEM_TIMER_BALL){
+                    SetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM, ITEM_NONE);
+                }
+
+                // remove held scaling-specific items (pokeballs)
+                if (GetNbBadges() > 4 && GetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM) == ITEM_ORAN_BERRY){
+                    newItem = ITEM_SITRUS_BERRY;
+                    SetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM, &newItem);
+                }
+                if (gBattleTypeFlags & BATTLE_TYPE_TRAINER){
+                    friendShipToUse = min(255, GetNbBadges() * 55);
+                    SetMonData(&gEnemyParty[i], MON_DATA_FRIENDSHIP, &friendShipToUse);
+                    for (k = 0; k < 2; k++){
+                        speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_NORMAL, 0);
+                        if (speciesToUse == SPECIES_NONE && GetNbBadges() >= 4){
+                            for (j = 0; j < 6; j++){
+                                speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_ITEM_USE, evolutionItems[j]);
+                                if (speciesToUse != SPECIES_NONE){
+                                    break;
+                                }
+                            }
+                        }
+                        if (speciesToUse != SPECIES_NONE){
+                            SetMonData(&gEnemyParty[i], MON_DATA_SPECIES, &speciesToUse);
+                            SetMonData(&gEnemyParty[i], MON_DATA_NICKNAME, &gSpeciesNames[speciesToUse]);
+                            SetMonData(&gEnemyParty[i], MON_DATA_SPECIES_OR_EGG, &speciesToUse);
+                        } else {
+                            break;
+                        }
+                    }
+                    
+
+                    // Scale EVs based on nb of badges
+                    evToUse = GetNbBadges() * 12;
+                    if (gTrainers[gTrainerBattleOpponent_A].trainerClass == TRAINER_CLASS_LEADER){
+                        evToUse += 40;
+                    }
+                    SetMonData(&gEnemyParty[i], MON_DATA_HP_EV, &evToUse);
+                    SetMonData(&gEnemyParty[i], MON_DATA_ATK_EV, &evToUse);
+                    SetMonData(&gEnemyParty[i], MON_DATA_DEF_EV, &evToUse);
+                    SetMonData(&gEnemyParty[i], MON_DATA_SPATK_EV, &evToUse);
+                    SetMonData(&gEnemyParty[i], MON_DATA_SPDEF_EV, &evToUse);
+                    SetMonData(&gEnemyParty[i], MON_DATA_SPEED_EV, &evToUse);
+                }
+                
+
+                CalculateMonStats(&gEnemyParty[i]);
+                
+                // Give the Initial Moveset only to trainers with no custom moveset or wild pokémon
+                if (gBattleTypeFlags & BATTLE_TYPE_TRAINER){
+                    if(gTrainers[gTrainerBattleOpponent_A].partyFlags != F_TRAINER_PARTY_CUSTOM_MOVESET){
+                        GiveBoxMonInitialMoveset(&gEnemyParty[i].box);
+                    }
+                } else {
+                    GiveBoxMonInitialMoveset(&gEnemyParty[i].box);
+                }
+                
+            }
+        }
     }
 
     gMain.inBattle = TRUE;
@@ -4612,6 +4702,7 @@ u8 GetWhoStrikesFirst(u8 battler1, u8 battler2, bool8 ignoreChosenMoves)
         holdEffectParam = ItemId_GetHoldEffectParam(gBattleMons[battler1].item);
     }
 
+    /*
     // badge boost
     if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED_LINK | BATTLE_TYPE_FRONTIER))
         && FlagGet(FLAG_BADGE03_GET)
@@ -4619,6 +4710,7 @@ u8 GetWhoStrikesFirst(u8 battler1, u8 battler2, bool8 ignoreChosenMoves)
     {
         speedBattler1 = (speedBattler1 * 110) / 100;
     }
+    */
 
     if (holdEffect == HOLD_EFFECT_MACHO_BRACE)
         speedBattler1 /= 2;
@@ -4646,6 +4738,7 @@ u8 GetWhoStrikesFirst(u8 battler1, u8 battler2, bool8 ignoreChosenMoves)
         holdEffectParam = ItemId_GetHoldEffectParam(gBattleMons[battler2].item);
     }
 
+    /*
     // badge boost
     if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED_LINK | BATTLE_TYPE_FRONTIER))
         && FlagGet(FLAG_BADGE03_GET)
@@ -4653,6 +4746,7 @@ u8 GetWhoStrikesFirst(u8 battler1, u8 battler2, bool8 ignoreChosenMoves)
     {
         speedBattler2 = (speedBattler2 * 110) / 100;
     }
+    */
 
     if (holdEffect == HOLD_EFFECT_MACHO_BRACE)
         speedBattler2 /= 2;

@@ -1,6 +1,7 @@
 #include "global.h"
 #include "event_data.h"
 #include "pokedex.h"
+#include "constants/items.h"
 
 #define SPECIAL_FLAGS_SIZE  (NUM_SPECIAL_FLAGS / 8)  // 8 flags per byte
 #define TEMP_FLAGS_SIZE     (NUM_TEMP_FLAGS / 8)
@@ -230,4 +231,131 @@ bool8 FlagGet(u16 id)
         return FALSE;
 
     return TRUE;
+}
+
+int GetNbBadges(void){
+    return FlagGet(FLAG_BADGE01_GET) + 
+                FlagGet(FLAG_BADGE02_GET) +
+                FlagGet(FLAG_BADGE03_GET) +
+                FlagGet(FLAG_BADGE04_GET) +
+                FlagGet(FLAG_BADGE05_GET) +
+                FlagGet(FLAG_BADGE06_GET) +
+                FlagGet(FLAG_BADGE07_GET) +
+                FlagGet(FLAG_BADGE08_GET);
+}
+
+u8 GetLevelToUse(u16 heldItem){
+    u8 ret;
+    u8 levelPlusFlat = 0;
+    u8 levelMinusFlat = 0;
+    u8 baseLevel;
+    int nbBadges;
+
+
+
+    nbBadges = GetNbBadges();
+
+    switch (heldItem)
+    {
+        case ITEM_POKE_BALL:
+            levelMinusFlat = 2;
+            break;
+        case ITEM_GREAT_BALL:
+            levelMinusFlat = 1;
+            break;
+        case ITEM_ULTRA_BALL:
+            levelPlusFlat = 1;
+            break;
+        case ITEM_MASTER_BALL:
+            levelPlusFlat = 2;
+            break;
+        case ITEM_SAFARI_BALL:
+            if (nbBadges == 0){
+                levelPlusFlat = 6;
+            } else {
+                levelPlusFlat = 5 + nbBadges;
+            }
+            break;
+        case ITEM_NET_BALL:
+            if (nbBadges == 0){
+                levelPlusFlat = 5;
+            } else {
+                levelPlusFlat = 4 + nbBadges;
+            }
+            break;
+        case ITEM_NEST_BALL:
+            if (nbBadges == 0){
+                levelPlusFlat = 4;
+            } else {
+                levelPlusFlat = 3 + nbBadges;
+            }
+            break;
+        case ITEM_REPEAT_BALL:
+            if (nbBadges == 0){
+                levelPlusFlat = 3;
+            } else {
+                levelPlusFlat = 2 + nbBadges;
+            }
+            break;
+        case ITEM_TIMER_BALL:
+            if (nbBadges == 0){
+                levelPlusFlat = 2;
+            } else {
+                levelPlusFlat = 1 + nbBadges;
+            }
+            break;
+        case ITEM_ORAN_BERRY:
+            if (nbBadges == 0){
+                levelPlusFlat = 4;
+            } else {
+                levelPlusFlat = 3 + nbBadges;
+            }
+            break;
+        case ITEM_PECHA_BERRY:
+            if (nbBadges == 0){
+                levelPlusFlat = 5;
+            } else {
+                levelPlusFlat = 4 + nbBadges;
+            }
+            break;
+        case ITEM_CHERI_BERRY:
+            if (nbBadges == 0){
+                levelPlusFlat = 6;
+            } else {
+                levelPlusFlat = 5 + nbBadges;
+            }
+            break;
+        case ITEM_SHELL_BELL:
+            if (nbBadges == 0){
+                levelPlusFlat = 7;
+            } else {
+                levelPlusFlat = 6 + nbBadges;
+            }
+            break;
+        case ITEM_SITRUS_BERRY:
+            if (nbBadges == 0){
+                levelPlusFlat = 8;
+            } else {
+                levelPlusFlat = 7 + nbBadges;
+            }
+            break;
+        case ITEM_LEFTOVERS:
+            if (nbBadges == 0){
+                levelPlusFlat = 8;
+            } else {
+                levelPlusFlat = 7 + nbBadges;
+            }
+            break;
+    }
+
+    if (nbBadges == 0){
+        baseLevel = 5;
+    } else {
+        baseLevel = 6 + 6 * nbBadges;
+    }
+
+
+    ret = baseLevel + levelPlusFlat - levelMinusFlat;
+
+    return ret;
 }
