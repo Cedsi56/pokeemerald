@@ -717,11 +717,16 @@ static void CB2_InitBattleInternal(void)
             if (GetMonData(&gEnemyParty[i], MON_DATA_SPECIES_OR_EGG) == SPECIES_NONE){
                 break;
             }
-            if (GetMonData(&gEnemyParty[i], MON_DATA_ATK_IV) > GetNbBadges() * 4){
-                // this pokemon is ignored until you have enough badges
+            if (GetMonData(&gEnemyParty[i], MON_DATA_ATK_IV) > GetNbBadges() * 4 && gBattleTypeFlags & BATTLE_TYPE_TRAINER){
+                // this trainer's pokemon is ignored until you have enough badges
                 ZeroMonData(&gEnemyParty[i]);
             } else {
                 levelToUse = GetLevelToUse(GetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM));
+                
+                if (!(gBattleTypeFlags & BATTLE_TYPE_TRAINER)){
+                    levelToUse = levelToUse - 1 - (gRngValue % (GetNbBadges() + 2));
+                }
+                
                 SetMonData(&gEnemyParty[i], MON_DATA_LEVEL, &levelToUse);
                 experience = gExperienceTables[gSpeciesInfo[GetMonData(&gEnemyParty[i], MON_DATA_SPECIES, NULL)].growthRate][GetMonData(&gEnemyParty[i], MON_DATA_LEVEL, NULL)];
                 SetMonData(&gEnemyParty[i], MON_DATA_EXP, &experience);
@@ -738,29 +743,29 @@ static void CB2_InitBattleInternal(void)
                     newItem = ITEM_SITRUS_BERRY;
                     SetMonData(&gEnemyParty[i], MON_DATA_HELD_ITEM, &newItem);
                 }
-                if (gBattleTypeFlags & BATTLE_TYPE_TRAINER){
-                    friendShipToUse = min(255, GetNbBadges() * 55);
-                    SetMonData(&gEnemyParty[i], MON_DATA_FRIENDSHIP, &friendShipToUse);
-                    for (k = 0; k < 2; k++){
-                        speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_NORMAL, 0);
-                        if (speciesToUse == SPECIES_NONE && GetNbBadges() >= 4){
-                            for (j = 0; j < 6; j++){
-                                speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_ITEM_USE, evolutionItems[j]);
-                                if (speciesToUse != SPECIES_NONE){
-                                    break;
-                                }
+                
+                friendShipToUse = min(255, GetNbBadges() * 55);
+                SetMonData(&gEnemyParty[i], MON_DATA_FRIENDSHIP, &friendShipToUse);
+                for (k = 0; k < 2; k++){
+                    speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_NORMAL, 0);
+                    if (speciesToUse == SPECIES_NONE && GetNbBadges() >= 4){
+                        for (j = 0; j < 6; j++){
+                            speciesToUse = GetEvolutionTargetSpecies(&gEnemyParty[i], EVO_MODE_ITEM_USE, evolutionItems[j]);
+                            if (speciesToUse != SPECIES_NONE){
+                                break;
                             }
                         }
-                        if (speciesToUse != SPECIES_NONE){
-                            SetMonData(&gEnemyParty[i], MON_DATA_SPECIES, &speciesToUse);
-                            SetMonData(&gEnemyParty[i], MON_DATA_NICKNAME, &gSpeciesNames[speciesToUse]);
-                            SetMonData(&gEnemyParty[i], MON_DATA_SPECIES_OR_EGG, &speciesToUse);
-                        } else {
-                            break;
-                        }
                     }
-                    
-
+                    if (speciesToUse != SPECIES_NONE){
+                        SetMonData(&gEnemyParty[i], MON_DATA_SPECIES, &speciesToUse);
+                        SetMonData(&gEnemyParty[i], MON_DATA_NICKNAME, &gSpeciesNames[speciesToUse]);
+                        SetMonData(&gEnemyParty[i], MON_DATA_SPECIES_OR_EGG, &speciesToUse);
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (gBattleTypeFlags & BATTLE_TYPE_TRAINER){
                     // Scale EVs based on nb of badges
                     evToUse = GetNbBadges() * 12;
                     if (gTrainers[gTrainerBattleOpponent_A].trainerClass == TRAINER_CLASS_LEADER){

@@ -116,15 +116,6 @@
   "coord_events": [
     {
       "type": "trigger",
-      "x": 0,
-      "y": 10,
-      "elevation": 3,
-      "var": "VAR_OLDALE_TOWN_STATE",
-      "var_value": "0",
-      "script": "OldaleTown_EventScript_BlockedPath"
-    },
-    {
-      "type": "trigger",
       "x": 8,
       "y": 19,
       "elevation": 3,
@@ -149,6 +140,15 @@
       "var": "VAR_OLDALE_RIVAL_STATE",
       "var_value": "1",
       "script": "OldaleTown_EventScript_RivalTrigger3"
+    },
+    {
+      "type": "trigger",
+      "x": 0,
+      "y": 10,
+      "elevation": 3,
+      "var": "VAR_OLDALE_TOWN_STATE",
+      "var_value": "0",
+      "script": "OldaleTown_EventScript_BlockedPath"
     }
   ],
   "bg_events": [
